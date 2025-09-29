@@ -1,0 +1,17 @@
+[
+    {
+        "title": "قناة تلجرام الرسمية",
+        "url": "https://t.me/example_channel",
+        "points": 5
+    },
+    {
+        "title": "صفحة انستجرام",
+        "url": "https://instagram.com/example_page",
+        "points": 8
+    },
+    {
+        "title": "موقعنا الإلكتروني",
+        "url": "https://example.com",
+        "points": 10
+    }
+]

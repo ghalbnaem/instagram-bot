@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}إعلانات المستخدمين - لوحة تحكم بوت تيليجرام{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">إعلانات المستخدمين</h1>
+    
+    <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">الإعلانات المنشورة من قبل المستخدمين</h5>
+            <span class="badge bg-light text-dark">العدد: 
+                {% set total = 0 %}
+                {% for user_id, ads_list in user_ads.items() %}
+                    {% set total = total + ads_list|length %}
+                {% endfor %}
+                {{ total }}
+            </span>
+        </div>
+        <div class="card-body">
+            {% if user_ads %}
+                <ul class="nav nav-tabs mb-4" id="userAdsTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="all-ads-tab" data-bs-toggle="tab" data-bs-target="#all-ads" type="button" role="tab" aria-controls="all-ads" aria-selected="true">جميع الإعلانات</button>
+                    </li>
+                    
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="by-user-tab" data-bs-toggle="tab" data-bs-target="#by-user" type="button" role="tab" aria-controls="by-user" aria-selected="false">حسب المستخدم</button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="userAdsTabContent">
+                    <div class="tab-pane fade show active" id="all-ads" role="tabpanel" aria-labelledby="all-ads-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>المستخدم</th>
+                                        <th>نص الإعلان</th>
+                                        <th>النقاط</th>
+                                        <th>التاريخ</th>
+                                        <th>المشاهدات</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set index = 1 %}
+                                    {% for user_id, ads_list in user_ads.items() %}
+                                        {% for ad in ads_list %}
+                                            <tr>
+                                                <td>{{ index }}</td>
+                                                <td>
+                                                    <a href="{{ url_for('user_detail', user_id=user_id) }}">{{ user_id }}</a>
+                                                </td>
+                                                <td>{{ ad.text }}</td>
+                                                <td><span class="badge bg-success">{{ ad.points }}</span></td>
+                                                <td>{{ ad.date }}</td>
+                                                <td><span class="badge bg-secondary">{{ ad.views }}</span></td>
+                                                <td>
+                                                    {% if ad.active|default(true) %}
+                                                        <span class="badge bg-success">نشط</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">غير نشط</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if ad.active|default(true) %}
+                                                        <button type="button" class="btn btn-sm btn-danger" 
+                                                                data-bs-toggle="modal" data-bs-target="#deactivateAdModal" 
+                                                                data-user-id="{{ user_id }}" 
+                                                                data-ad-index="{{ loop.index0 }}" 
+                                                                data-ad-text="{{ ad.text }}">
+                                                            <i class="bi bi-x-circle"></i> تعطيل
+                                                        </button>
+                                                    {% else %}
+                                                        <button type="button" class="btn btn-sm btn-success" 
+                                                                data-bs-toggle="modal" data-bs-target="#activateAdModal" 
+                                                                data-user-id="{{ user_id }}" 
+                                                                data-ad-index="{{ loop.index0 }}" 
+                                                                data-ad-text="{{ ad.text }}">
+                                                            <i class="bi bi-check-circle"></i> تفعيل
+                                                        </button>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% set index = index + 1 %}
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="by-user" role="tabpanel" aria-labelledby="by-user-tab">
+                        <div class="accordion" id="userAdsAccordion">
+                            {% for user_id, ads_list in user_ads.items() %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading{{ user_id }}">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ user_id }}" aria-expanded="false" aria-controls="collapse{{ user_id }}">
+                                            المستخدم: {{ user_id }} <span class="badge bg-info ms-2">{{ ads_list|length }} إعلان</span>
+                                        </button>
+                                    </h2>
+                                    <div id="collapse{{ user_id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ user_id }}" data-bs-parent="#userAdsAccordion">
+                                        <div class="accordion-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-hover align-middle">
+                                                    <thead class="table-dark">
+                                                        <tr>
+                                                            <th>#</th>
+                                                            <th>نص الإعلان</th>
+                                                            <th>النقاط</th>
+                                                            <th>التاريخ</th>
+                                                            <th>المشاهدات</th>
+                                                            <th>الحالة</th>
+                                                            <th>الإجراءات</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for ad in ads_list %}
+                                                            <tr>
+                                                                <td>{{ loop.index }}</td>
+                                                                <td>{{ ad.text }}</td>
+                                                                <td><span class="badge bg-success">{{ ad.points }}</span></td>
+                                                                <td>{{ ad.date }}</td>
+                                                                <td><span class="badge bg-secondary">{{ ad.views }}</span></td>
+                                                                <td>
+                                                                    {% if ad.active|default(true) %}
+                                                                        <span class="badge bg-success">نشط</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-danger">غير نشط</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if ad.active|default(true) %}
+                                                                        <button type="button" class="btn btn-sm btn-danger" 
+                                                                                data-bs-toggle="modal" data-bs-target="#deactivateAdModal" 
+                                                                                data-user-id="{{ user_id }}" 
+                                                                                data-ad-index="{{ loop.index0 }}" 
+                                                                                data-ad-text="{{ ad.text }}">
+                                                                            <i class="bi bi-x-circle"></i> تعطيل
+                                                                        </button>
+                                                                    {% else %}
+                                                                        <button type="button" class="btn btn-sm btn-success" 
+                                                                                data-bs-toggle="modal" data-bs-target="#activateAdModal" 
+                                                                                data-user-id="{{ user_id }}" 
+                                                                                data-ad-index="{{ loop.index0 }}" 
+                                                                                data-ad-text="{{ ad.text }}">
+                                                                            <i class="bi bi-check-circle"></i> تفعيل
+                                                                        </button>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    لا توجد إعلانات منشورة من قبل المستخدمين حتى الآن.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Deactivate Ad Modal -->
+<div class="modal fade" id="deactivateAdModal" tabindex="-1" aria-labelledby="deactivateAdModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deactivateAdModalLabel">تعطيل إعلان</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('toggle_user_ad') }}" method="post">
+                <div class="modal-body">
+                    <input type="hidden" id="deactivateUserId" name="user_id">
+                    <input type="hidden" id="deactivateAdIndex" name="ad_index">
+                    <input type="hidden" name="action" value="deactivate">
+                    <p>هل أنت متأكد من تعطيل هذا الإعلان؟</p>
+                    <div class="alert alert-warning" id="deactivateAdText"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger">تعطيل</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Activate Ad Modal -->
+<div class="modal fade" id="activateAdModal" tabindex="-1" aria-labelledby="activateAdModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="activateAdModalLabel">تفعيل إعلان</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('toggle_user_ad') }}" method="post">
+                <div class="modal-body">
+                    <input type="hidden" id="activateUserId" name="user_id">
+                    <input type="hidden" id="activateAdIndex" name="ad_index">
+                    <input type="hidden" name="action" value="activate">
+                    <p>هل أنت متأكد من تفعيل هذا الإعلان؟</p>
+                    <div class="alert alert-info" id="activateAdText"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">تفعيل</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Deactivate Ad Modal
+        const deactivateAdModal = document.getElementById('deactivateAdModal');
+        if (deactivateAdModal) {
+            deactivateAdModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const userId = button.getAttribute('data-user-id');
+                const adIndex = button.getAttribute('data-ad-index');
+                const adText = button.getAttribute('data-ad-text');
+                
+                const modalUserId = deactivateAdModal.querySelector('#deactivateUserId');
+                const modalAdIndex = deactivateAdModal.querySelector('#deactivateAdIndex');
+                const modalAdText = deactivateAdModal.querySelector('#deactivateAdText');
+                
+                modalUserId.value = userId;
+                modalAdIndex.value = adIndex;
+                modalAdText.textContent = adText;
+            });
+        }
+        
+        // Activate Ad Modal
+        const activateAdModal = document.getElementById('activateAdModal');
+        if (activateAdModal) {
+            activateAdModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const userId = button.getAttribute('data-user-id');
+                const adIndex = button.getAttribute('data-ad-index');
+                const adText = button.getAttribute('data-ad-text');
+                
+                const modalUserId = activateAdModal.querySelector('#activateUserId');
+                const modalAdIndex = activateAdModal.querySelector('#activateAdIndex');
+                const modalAdText = activateAdModal.querySelector('#activateAdText');
+                
+                modalUserId.value = userId;
+                modalAdIndex.value = adIndex;
+                modalAdText.textContent = adText;
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block title %}الإعلانات - لوحة تحكم بوت تيليجرام{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>إدارة الإعلانات</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAdModal">
+            <i class="bi bi-plus-circle"></i> إضافة إعلان جديد
+        </button>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">الإعلانات المضافة</h5>
+            <span class="badge bg-light text-dark">العدد: {{ ads|length if ads is mapping else ads|sum(attribute='1') }}</span>
+        </div>
+        <div class="card-body">
+            {% if ads %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>نص الإعلان</th>
+                                <th>النقاط</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if ads is mapping %}
+                                {% for text, points in ads.items() %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ text }}</td>
+                                        <td><span class="badge bg-success">{{ points }}</span></td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-warning me-2" 
+                                                    data-bs-toggle="modal" data-bs-target="#editAdModal" 
+                                                    data-ad-index="{{ loop.index0 }}" 
+                                                    data-ad-text="{{ text }}" 
+                                                    data-ad-points="{{ points }}">
+                                                <i class="bi bi-pencil-fill"></i> تعديل
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" 
+                                                    data-bs-toggle="modal" data-bs-target="#deleteAdModal" 
+                                                    data-ad-index="{{ loop.index0 }}" 
+                                                    data-ad-text="{{ text }}">
+                                                <i class="bi bi-trash-fill"></i> حذف
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                {% for ad_item in ads %}
+                                    {% for text, points in ad_item.items() %}
+                                        <tr>
+                                            <td>{{ loop.index }}</td>
+                                            <td>{{ text }}</td>
+                                            <td><span class="badge bg-success">{{ points }}</span></td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-warning me-2" 
+                                                        data-bs-toggle="modal" data-bs-target="#editAdModal" 
+                                                        data-ad-index="{{ loop.index0 }}" 
+                                                        data-ad-text="{{ text }}" 
+                                                        data-ad-points="{{ points }}">
+                                                    <i class="bi bi-pencil-fill"></i> تعديل
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-danger" 
+                                                        data-bs-toggle="modal" data-bs-target="#deleteAdModal" 
+                                                        data-ad-index="{{ loop.index0 }}" 
+                                                        data-ad-text="{{ text }}">
+                                                    <i class="bi bi-trash-fill"></i> حذف
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    لا توجد إعلانات مضافة حتى الآن.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Ad Modal -->
+<div class="modal fade" id="addAdModal" tabindex="-1" aria-labelledby="addAdModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addAdModalLabel">إضافة إعلان جديد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('add_ad') }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="adText" class="form-label">نص الإعلان</label>
+                        <textarea class="form-control" id="adText" name="ad_text" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="adPoints" class="form-label">النقاط</label>
+                        <input type="number" class="form-control" id="adPoints" name="ad_points" min="1" value="10" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Ad Modal -->
+<div class="modal fade" id="editAdModal" tabindex="-1" aria-labelledby="editAdModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAdModalLabel">تعديل إعلان</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('edit_ad') }}" method="post">
+                <div class="modal-body">
+                    <input type="hidden" id="editAdIndex" name="ad_index">
+                    <div class="mb-3">
+                        <label for="editAdText" class="form-label">نص الإعلان</label>
+                        <textarea class="form-control" id="editAdText" name="ad_text" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAdPoints" class="form-label">النقاط</label>
+                        <input type="number" class="form-control" id="editAdPoints" name="ad_points" min="1" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning">تحديث</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Ad Modal -->
+<div class="modal fade" id="deleteAdModal" tabindex="-1" aria-labelledby="deleteAdModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAdModalLabel">حذف إعلان</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('delete_ad') }}" method="post">
+                <div class="modal-body">
+                    <input type="hidden" id="deleteAdIndex" name="ad_index">
+                    <p>هل أنت متأكد من حذف هذا الإعلان؟</p>
+                    <div class="alert alert-warning" id="deleteAdText"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Edit Ad Modal
+        const editAdModal = document.getElementById('editAdModal');
+        if (editAdModal) {
+            editAdModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const adIndex = button.getAttribute('data-ad-index');
+                const adText = button.getAttribute('data-ad-text');
+                const adPoints = button.getAttribute('data-ad-points');
+                
+                const modalAdIndex = editAdModal.querySelector('#editAdIndex');
+                const modalAdText = editAdModal.querySelector('#editAdText');
+                const modalAdPoints = editAdModal.querySelector('#editAdPoints');
+                
+                modalAdIndex.value = adIndex;
+                modalAdText.value = adText;
+                modalAdPoints.value = adPoints;
+            });
+        }
+        
+        // Delete Ad Modal
+        const deleteAdModal = document.getElementById('deleteAdModal');
+        if (deleteAdModal) {
+            deleteAdModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const adIndex = button.getAttribute('data-ad-index');
+                const adText = button.getAttribute('data-ad-text');
+                
+                const modalAdIndex = deleteAdModal.querySelector('#deleteAdIndex');
+                const modalAdText = deleteAdModal.querySelector('#deleteAdText');
+                
+                modalAdIndex.value = adIndex;
+                modalAdText.textContent = adText;
+            });
+        }
+    });
+</script>
+{% endblock %}

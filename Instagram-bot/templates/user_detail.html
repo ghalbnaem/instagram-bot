@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}تفاصيل المستخدم - لوحة تحكم بوت تيليجرام{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>تفاصيل المستخدم</h1>
+        <a href="{{ url_for('users') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-right"></i> العودة للقائمة
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">المعلومات الأساسية</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="avatar mb-3">
+                            <span class="avatar-text">
+                                {{ user.username[0]|upper if user.username else '?' }}
+                            </span>
+                        </div>
+                        <h4>
+                            {% if user.username %}
+                                @{{ user.username }}
+                            {% else %}
+                                <span class="text-muted">لا يوجد اسم مستخدم</span>
+                            {% endif %}
+                        </h4>
+                        <span class="badge bg-secondary">معرف: {{ user_id }}</span>
+                    </div>
+                    
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>النقاط</span>
+                            <span class="badge bg-success">{{ user.points }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>تاريخ التسجيل</span>
+                            <span>{{ user.registered_at }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>رمز الدعوة</span>
+                            <span class="badge bg-info">{{ user.invite_code }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8 mb-4">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">الروابط الاجتماعية</h5>
+                </div>
+                <div class="card-body">
+                    {% if user.social_links %}
+                        <ul class="list-group list-group-flush">
+                            {% for platform, link in user.social_links.items() %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{{ platform }}</span>
+                                    <a href="{{ link }}" target="_blank" class="text-truncate mx-3">{{ link }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="alert alert-info">
+                            لم يضف المستخدم أي روابط اجتماعية حتى الآن.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">سجل النقاط</h5>
+                </div>
+                <div class="card-body">
+                    {% if user.proofs %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>الخدمة</th>
+                                        <th>النقاط</th>
+                                        <th>التاريخ</th>
+                                        <th>التفاصيل</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for proof in user.proofs %}
+                                        <tr>
+                                            <td>{{ loop.index }}</td>
+                                            <td>{{ proof.service }}</td>
+                                            <td>
+                                                <span class="badge {% if proof.points > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                                    {{ proof.points }}
+                                                </span>
+                                            </td>
+                                            <td>{{ proof.date }}</td>
+                                            <td>
+                                                {% if proof.details %}
+                                                    {{ proof.details }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            لا توجد سجلات نقاط لهذا المستخدم.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">إحصائيات المستخدم</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-3">
+                            <div class="border rounded p-3">
+                                <h3>{{ user.watched_ads|length }}</h3>
+                                <p class="mb-0">إعلانات تمت مشاهدتها</p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="border rounded p-3">
+                                <h3>{{ user.proofs|selectattr('service', 'equalto', 'invite_sent')|list|length }}</h3>
+                                <p class="mb-0">مستخدمين تمت دعوتهم</p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="border rounded p-3">
+                                <h3>{{ user.proofs|selectattr('service', 'equalto', 'publish_ad')|list|length }}</h3>
+                                <p class="mb-0">إعلانات تم نشرها</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background-color: var(--bs-primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}

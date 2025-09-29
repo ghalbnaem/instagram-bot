@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}المستخدمين - لوحة تحكم بوت تيليجرام{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">قائمة المستخدمين</h1>
+    
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">المستخدمين المسجلين</h5>
+            <span class="badge bg-light text-dark">العدد: {{ users|length }}</span>
+        </div>
+        <div class="card-body">
+            {% if users %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>معرف المستخدم</th>
+                                <th>اسم المستخدم</th>
+                                <th>النقاط</th>
+                                <th>تاريخ التسجيل</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user_id, user_data in users.items() %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>{{ user_id }}</td>
+                                    <td>
+                                        {% if user_data.username %}
+                                            @{{ user_data.username }}
+                                        {% else %}
+                                            <span class="text-muted">غير متاح</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ user_data.points }}</span>
+                                    </td>
+                                    <td>{{ user_data.registered_at }}</td>
+                                    <td>
+                                        <a href="{{ url_for('user_detail', user_id=user_id) }}" class="btn btn-sm btn-info">
+                                            <i class="bi bi-eye-fill"></i> عرض
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    لا يوجد مستخدمين مسجلين حتى الآن.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

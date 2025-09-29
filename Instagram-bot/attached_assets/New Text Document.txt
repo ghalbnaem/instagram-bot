@@ -1,0 +1,459 @@
+run_bot.bat
+@echo off
+title Telegram Bot Launcher - Powered by Abu Laith
+
+
+echo 🔵 تفعيل البيئة الافتراضية...
+call telegram_bot\venv\Scripts\activate.bat
+
+
+
+echo 🟢 تشغيل البوت...
+python main.py
+
+pause
+--------------------------------------------------------------
+requirements.txt
+pyTelegramBotAPI
+python-dotenv
+---------------------------------------------------------------
+
+# main.py
+
+import telebot
+import os
+from dotenv import load_dotenv
+from modules.functions import register_user, add_social_link, get_user_profile, get_random_ad, get_user_proofs, add_points
+from modules.keyboards import welcome_keyboard, social_platform_keyboard, main_menu_keyboard, remove_keyboard
+import time  # لاحتساب وقت المشاهدة (بشكل مبسط حاليًا)
+from telebot import types  # إضافة هذا السطر
+
+load_dotenv()
+TOKEN = os.getenv('TOKEN')
+bot = telebot.TeleBot(TOKEN)
+
+# ... باقي كود البوت ...
+
+user_social_link = {}
+WAIT_TIME_FOR_AD = 5   # عدد الثواني المطلوبة لمشاهدة الإعلان
+AD_POINTS = 10      # عدد النقاط التي يكسبها المستخدم مقابل مشاهدة الإعلان
+user_watching_ad = {} # لتتبع المستخدمين الذين يشاهدون إعلانًا
+
+def clear_ad_watching_state(user_id, chat_id, message_text=None):
+    if user_id in user_watching_ad:
+        del user_watching_ad[user_id]
+        if message_text:
+            bot.send_message(chat_id, message_text, reply_markup=main_menu_keyboard())
+        return True
+    return False
+
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    user_id = message.from_user.id
+    username = message.from_user.username
+
+    register_user(user_id, username)
+    clear_ad_watching_state(user_id, message.chat.id, "تم إلغاء مشاهدة الإعلان.")
+    bot.send_message(
+        message.chat.id,
+        f"أهلاً بك {message.from_user.first_name} 👋\n\n"
+        "ماذا تود أن تفعل؟",
+        reply_markup=welcome_keyboard()
+    )
+
+@bot.message_handler(func=lambda message: message.text == "📱 إضافة رابط حساب")
+def ask_platform(message):
+    user_id = message.from_user.id
+    clear_ad_watching_state(user_id, message.chat.id)
+    bot.send_message(message.chat.id, "اختر المنصة:", reply_markup=social_platform_keyboard())
+    bot.register_next_step_handler(message, get_platform)
+
+def get_platform(message):
+    platform = message.text
+    if platform in ["Telegram", "Instagram", "Facebook", "YouTube"]:
+        user_social_link[message.chat.id] = {"platform": platform}
+        bot.send_message(message.chat.id, f"أرسل رابط حسابك على {platform}:")
+        bot.register_next_step_handler(message, save_social_link)
+    elif platform == "🚫 إلغاء":
+        bot.send_message(message.chat.id, "تم إلغاء إضافة الرابط.", reply_markup=remove_keyboard())
+    else:
+        bot.send_message(message.chat.id, "الرجاء اختيار منصة من القائمة.", reply_markup=social_platform_keyboard())
+        bot.register_next_step_handler(message, get_platform)
+
+def save_social_link(message):
+    user_id = message.from_user.id
+    link = message.text
+    if user_id in user_social_link and "platform" in user_social_link[user_id]:
+        platform = user_social_link[user_id]["platform"]
+        add_social_link(user_id, platform, link)
+        del user_social_link[user_id]
+        bot.send_message(message.chat.id, f"تم حفظ رابطك على {platform} بنجاح ✅", reply_markup=main_menu_keyboard())
+    else:
+        bot.send_message(message.chat.id, "حدث خطأ، حاول مرة أخرى.", reply_markup=remove_keyboard())
+
+@bot.message_handler(func=lambda message: message.text == "🚀 تخطي وإكمال")
+def skip_link(message):
+    user_id = message.from_user.id
+    clear_ad_watching_state(user_id, message.chat.id)
+    bot.send_message(message.chat.id, "تمام! يمكنك البدء في استخدام البوت.", reply_markup=main_menu_keyboard())
+
+@bot.message_handler(func=lambda message: message.text == "👤 ملفي الشخصي")
+@bot.message_handler(commands=['myprofile', 'رصيدي'])
+def show_profile(message):
+    user_id = message.from_user.id
+    clear_ad_watching_state(user_id, message.chat.id)
+    profile = get_user_profile(user_id)
+    bot.send_message(message.chat.id, profile, reply_markup=main_menu_keyboard())
+
+@bot.message_handler(func=lambda message: message.text == "🎁 مشاهدة إعلان")
+def show_ad(message):
+    user_id = message.from_user.id
+    ad = get_random_ad()
+    if ad:
+        bot.send_message(message.chat.id, f"الإعلان:\n{ad}\n\nالرجاء الانتظار:")
+        for i in range(1, WAIT_TIME_FOR_AD + 1):
+            time.sleep(1)
+            bot.edit_message_text(f"الإعلان:\n{ad}\n\nالرجاء الانتظار: {i}", chat_id=message.chat.id, message_id=message.message_id + 1) # تعديل الرسالة السابقة
+        add_points(user_id, AD_POINTS, "watch_ad", f"watched_for_{WAIT_TIME_FOR_AD}_seconds")
+        bot.send_message(message.chat.id, f"تهانينا! حصلت على {AD_POINTS} نقطة مقابل مشاهدة الإعلان.", reply_markup=main_menu_keyboard())
+    else:
+        bot.send_message(message.chat.id, "لا توجد إعلانات متاحة حاليًا.", reply_markup=main_menu_keyboard())
+
+def check_ad_watched(message):
+    user_id = message.from_user.id
+    wait_button_text = f"⏳ انتظر ({WAIT_TIME_FOR_AD} ثواني)"
+
+    if user_id not in user_watching_ad:
+        bot.send_message(message.chat.id, "حدث خطأ، لم يتم تسجيل مشاهدتك للإعلان.", reply_markup=main_menu_keyboard())
+        return
+
+    if message.text == wait_button_text:
+        # المستخدم يضغط على زر الانتظار، لا تفعل شيئًا
+        return
+
+    start_time = user_watching_ad[user_id]
+    elapsed_time = time.time() - start_time
+
+    if elapsed_time >= WAIT_TIME_FOR_AD:
+        add_points(user_id, AD_POINTS, "watch_ad", f"watched_for_{int(elapsed_time)}_seconds")
+        bot.send_message(message.chat.id, f"تهانينا! حصلت على {AD_POINTS} نقطة مقابل مشاهدة الإعلان.", reply_markup=main_menu_keyboard())
+        del user_watching_ad[user_id]
+    else:
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        markup.add(wait_button_text)
+        bot.send_message(message.chat.id, f"الرجاء الانتظار {WAIT_TIME_FOR_AD} ثواني كاملة قبل استلام النقاط.", reply_markup=markup)
+        bot.register_next_step_handler(message, check_ad_watched)
+
+@bot.message_handler(func=lambda message: message.text == "📜 الإثباتات")
+@bot.message_handler(commands=['proofs'])
+def show_proofs(message):
+    user_id = message.from_user.id
+    clear_ad_watching_state(user_id, message.chat.id)
+    proofs = get_user_proofs(user_id)
+    if proofs:
+        proofs_text = "📜 سجل الإثباتات الخاص بك:\n"
+        for proof in proofs:
+            proofs_text += f"- الخدمة: {proof['service']}\n"
+            proofs_text += f"- النقاط: {proof['points']:+}\n"
+            proofs_text += f"- التاريخ: {proof['date']}\n"
+            if proof.get('details'):
+                proofs_text += f"- التفاصيل: {proof['details']}\n"
+            proofs_text += "---\n"
+        bot.send_message(message.chat.id, proofs_text, reply_markup=main_menu_keyboard())
+    else:
+        bot.send_message(message.chat.id, "لا يوجد لديك أي إثباتات حتى الآن.", reply_markup=main_menu_keyboard())
+
+@bot.message_handler(func=lambda message: message.text == "💰 جمع النقاط")
+def collect_points(message):
+    user_id = message.from_user.id
+    clear_ad_watching_state(user_id, message.chat.id)
+    # هنا راح يكون منطق عرض قنوات للمتابعة ومنح نقاط
+    bot.send_message(message.chat.id, "سيتم إضافة ميزة جمع النقاط قريبًا...", reply_markup=main_menu_keyboard())
+
+@bot.message_handler(func=lambda message: message.text == "📢 نشر إعلاني")
+def publish_ad(message):
+    user_id = message.from_user.id
+    clear_ad_watching_state(user_id, message.chat.id)
+    # هنا راح يكون منطق السماح للمستخدمين بنشر إعلاناتهم مقابل نقاط
+    bot.send_message(message.chat.id, "سيتم إضافة ميزة نشر الإعلانات قريبًا...", reply_markup=main_menu_keyboard())
+
+@bot.message_handler(func=lambda message: True)
+def echo_all(message):
+    # يمكنك إضافة معالجات أخرى هنا للأوامر أو النصوص غير المعرفة
+    bot.reply_to(message, "لم أفهم ما تقصده.")
+
+if __name__ == '__main__':
+    bot.infinity_polling()
+---------------------------------------------------------------------------------------------------------
+.env
+TOKEN=7920089141:AAGqS8mzOWkxJRFNhkWzMhJ3IOC1KOsHbJk
+---------------------------------------------------------------------------------------------------------
+venv فولدر
+---------------------------------------------------------
+modules فولدر
+---------------------------------------------------------------------------
+data فولدر
+---------------------------------------------------------------
+modules\functions.py
+
+import os
+import json
+from datetime import datetime
+import uuid  # لإ生成 أكواد دعوة فريدة
+
+USERS_FILE = 'data/users.json'
+ADS_FILE = 'data/ads.json'  # ملف جديد لتخزين الإعلانات
+
+def load_data(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def save_data(data, file_path):
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+def load_users():
+    return load_data(USERS_FILE)
+
+def save_users(users):
+    save_data(users, USERS_FILE)
+
+def load_ads():
+    return load_data(ADS_FILE)
+
+def save_ads(ads):
+    save_data(ads, ADS_FILE)
+
+def generate_invite_code(user_id):
+    # يمكنك تعديل طريقة إنشاء رمز الدعوة ليكون أكثر تعقيدًا
+    return str(uuid.uuid4().hex[:8])
+
+def register_user(user_id, username):
+    users = load_users()
+    user_str_id = str(user_id)
+    if user_str_id not in users:
+        invite_code = generate_invite_code(user_id)
+        users[user_str_id] = {
+            "username": username,
+            "social_links": {},
+            "points": 50,
+            "registered_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            "proofs": [],
+            "invite_code": invite_code,
+            "invited_by": None  # سيتم تحديثه عند قبول دعوة
+        }
+        save_users(users)
+        log_proof(user_id, "registration", 50, "initial_points")
+
+def add_social_link(user_id, platform, link):
+    users = load_users()
+    user_str_id = str(user_id)
+    if user_str_id in users:
+        users[user_str_id]["social_links"][platform] = link
+        save_users(users)
+        log_proof(user_id, f"add_social_link_{platform}", 0, "link_added")
+
+def get_user_profile(user_id):
+    users = load_users()
+    user_data = users.get(str(user_id))
+    if user_data:
+        profile_text = f"👤 اسم المستخدم: @{user_data['username']}\n"
+        profile_text += f"⭐ نقاطك الحالية: {user_data['points']}\n"
+        profile_text += f"🔗 رابط الدعوة الخاص بك: https://t.me/<اسم_البوت>?start={user_data['invite_code']}\n"
+        if user_data.get('social_links'):
+            for platform, link in user_data['social_links'].items():
+                profile_text += f"🔗 {platform}: {link}\n"
+        return profile_text
+    return "لم يتم العثور على ملفك الشخصي."
+
+def log_proof(user_id, service_name, points, details=None):
+    users = load_users()
+    user_str_id = str(user_id)
+    if user_str_id in users:
+        proof = {
+            "service": service_name,
+            "points": points,
+            "date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            "details": details
+        }
+        users[user_str_id]["proofs"].append(proof)
+        save_users(users)
+
+def get_user_proofs(user_id):
+    users = load_users()
+    user_str_id = str(user_id)
+    if user_str_id in users:
+        return users[user_str_id]["proofs"]
+    return []
+
+def get_random_ad():
+    ads = load_ads()
+    if ads:
+        import random
+        return random.choice(ads)
+    return None
+
+def deduct_points(user_id, points, service_name):
+    users = load_users()
+    user_str_id = str(user_id)
+    if user_str_id in users and users[user_str_id]["points"] >= points:
+        users[user_str_id]["points"] -= points
+        save_users(users)
+        log_proof(user_id, service_name, -points, "points_deducted")
+        return True
+    return False
+
+def add_points(user_id, points, service_name, details=None):
+    users = load_users()
+    user_str_id = str(user_id)
+    if user_str_id in users:
+        users[user_str_id]["points"] += points
+        save_users(users)
+        log_proof(user_id, service_name, points, details)
+        return True
+    return False
+
+def get_invite_code(user_id):
+    users = load_users()
+    user_data = users.get(str(user_id))
+    return user_data.get("invite_code") if user_data else None
+
+def get_user_id_from_ref_code(ref_code):
+    users = load_users()
+    for user_id_str, user_data in users.items():
+        if user_data.get("invite_code") == ref_code:
+            return int(user_id_str)
+    return None
+
+def has_been_invited(user_id):
+    users = load_users()
+    user_data = users.get(str(user_id))
+    return user_data.get("invited_by") is not None
+
+def mark_as_invited(user_id, inviter_id):
+    users = load_users()
+    user_str_id = str(user_id)
+    if user_str_id in users:
+        users[user_str_id]["invited_by"] = inviter_id
+        save_users(users)
+-----------------------------------------------------------------------------
+modules\keyboards
+# modules/keyboards.py
+
+from telebot import types
+
+def welcome_keyboard():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    markup.add("📱 إضافة رابط حساب", "💰 جمع النقاط", "🎁 مشاهدة إعلان")
+    return markup
+
+def social_platform_keyboard():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    markup.add("Telegram", "Instagram", "Facebook", "YouTube", "🚫 إلغاء")
+    return markup
+
+def main_menu_keyboard():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    markup.add("👤 ملفي الشخصي", "💰 جمع النقاط", "🎁 مشاهدة إعلان")
+    markup.add("📢 نشر إعلاني", "📜 الإثباتات")
+    return markup
+
+def remove_keyboard():
+    return types.ReplyKeyboardRemove()
+-------------------------------------------------------------------------------------
+data\ads.json
+[
+    "📢 تابع صفحتنا لتحصل على آخر الأخبار!",
+    "📸 شارك صورك معنا واربح جوائز!",
+    "🎬 شاهد الفيديو الجديد ولا تنسَ اللايك!",
+    "🌐 زور موقعنا للمزيد من التفاصيل: example.com"
+]-------------------------------------------------------------------------------------------
+data\users.json{
+    "5031018716": {
+        "username": "Laith_ghalb",
+        "social_links": {
+            "Facebook": "www.facebook.com\\ghalb",
+            "YouTube": "يوتيوب"
+        },
+        "points": 160,
+        "registered_at": "2025-04-27 18:35:13",
+        "proofs": [
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 10:09:49",
+                "details": "watched_for_37_seconds"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 11:54:32",
+                "details": "watched_for_28_seconds"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 12:01:19",
+                "details": "watched_for_19_seconds"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 12:06:30",
+                "details": "watched_for_18_seconds"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 12:11:21",
+                "details": "watched_for_7_seconds"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 12:15:45",
+                "details": "watched_for_10_seconds"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 12:25:26",
+                "details": "watched_for_13_seconds"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 12:33:13",
+                "details": "watched_for_5_seconds"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 12:35:26",
+                "details": "watched_for_5_seconds"
+            },
+            {
+                "service": "add_social_link_YouTube",
+                "points": 0,
+                "date": "2025-04-28 12:37:19",
+                "details": "link_added"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 12:49:27",
+                "details": "watched_for_5_seconds"
+            },
+            {
+                "service": "watch_ad",
+                "points": 10,
+                "date": "2025-04-28 12:52:42",
+                "details": "watched_for_5_seconds"
+            }
+        ]
+    }
+}------------------------------------------------------------------
+

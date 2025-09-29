@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}الرئيسية - لوحة تحكم بوت تيليجرام{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>لوحة القيادة</h1>
+        <div>
+            <a href="https://t.me/your_bot_username" target="_blank" class="btn btn-primary">
+                <i class="bi bi-telegram"></i> فتح البوت
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Overview -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">المستخدمين</h5>
+                            <h3 class="mb-0">{{ statistics.total_users }}</h3>
+                            <small>{{ statistics.recent_registrations }} مستخدم جديد في آخر أسبوع</small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">مجموع النقاط</h5>
+                            <h3 class="mb-0">{{ statistics.total_points }}</h3>
+                            <small>نقاط في النظام</small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="bi bi-coin"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title">الإعلانات النشطة</h5>
+                            <h3 class="mb-0">{{ statistics.total_admin_ads + statistics.total_user_ads }}</h3>
+                            <small>{{ statistics.total_admin_ads }} إعلان إداري / {{ statistics.total_user_ads }} إعلان مستخدم</small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="bi bi-badge-ad-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">إجراءات سريعة</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{{ url_for('users') }}" class="btn btn-outline-primary btn-lg d-block">
+                                <i class="bi bi-people-fill mb-2 d-block" style="font-size: 2rem;"></i>
+                                عرض المستخدمين
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{{ url_for('ads') }}" class="btn btn-outline-success btn-lg d-block">
+                                <i class="bi bi-badge-ad-fill mb-2 d-block" style="font-size: 2rem;"></i>
+                                إدارة الإعلانات
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{{ url_for('user_ads') }}" class="btn btn-outline-info btn-lg d-block">
+                                <i class="bi bi-megaphone-fill mb-2 d-block" style="font-size: 2rem;"></i>
+                                إعلانات المستخدمين
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{{ url_for('links') }}" class="btn btn-outline-warning btn-lg d-block">
+                                <i class="bi bi-link-45deg mb-2 d-block" style="font-size: 2rem;"></i>
+                                روابط الزيارة
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Status -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">حالة النظام</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>حالة البوت</span>
+                            <span class="badge bg-success rounded-pill">نشط</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>اسم البوت</span>
+                            <span class="badge bg-primary rounded-pill">@YourBotName</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>عدد روابط الزيارة</span>
+                            <span class="badge bg-warning rounded-pill">{{ statistics.total_links }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">إحصائيات إضافية</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statsChart" width="400" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sample chart initialization
+        const ctx = document.getElementById('statsChart').getContext('2d');
+        const statsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['مستخدمين', 'إعلانات المسؤول', 'إعلانات المستخدمين', 'روابط الزيارة'],
+                datasets: [{
+                    label: 'إحصائيات البوت',
+                    data: [
+                        {{ statistics.total_users }}, 
+                        {{ statistics.total_admin_ads }}, 
+                        {{ statistics.total_user_ads }}, 
+                        {{ statistics.total_links }}
+                    ],
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(25, 135, 84, 0.7)',
+                        'rgba(13, 202, 240, 0.7)',
+                        'rgba(255, 193, 7, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(25, 135, 84, 1)',
+                        'rgba(13, 202, 240, 1)',
+                        'rgba(255, 193, 7, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
